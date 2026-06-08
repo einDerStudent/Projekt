@@ -825,8 +825,12 @@ function updateStartBtn() {
 //  OPENROUTER API CALL
 // ══════════════════════════════════════════════════════
 async function callGemini(prompt) {
+  if(window.location.protocol === 'file:') {
+    throw new Error('Файл открыт локально (file://). Запусти через сервер: python3 -m http.server 8080, затем открой http://localhost:8080/german-vocab.html');
+  }
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
+    mode: 'cors',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${geminiKey}`,
@@ -834,7 +838,7 @@ async function callGemini(prompt) {
       'X-Title': 'Wörterbuch'
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-001',
+      model: 'google/gemini-2.0-flash-exp:free',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.9,
       max_tokens: 800
