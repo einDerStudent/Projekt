@@ -355,10 +355,10 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="api-banner" id="api-banner">
       <div class="api-banner-icon">🔑</div>
       <div class="api-banner-text">
-        <h4>Введи OpenRouter API ключ</h4>
-        <p>Получи ключ на <a href="https://openrouter.ai/settings/keys" target="_blank" style="color:var(--accent)">openrouter.ai/settings/keys</a> — никуда не отправляется, хранится только в браузере</p>
+        <h4>Введи Gemini API ключ</h4>
+        <p>Бесплатный ключ на <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a> — никуда не отправляется, хранится только в браузере</p>
         <div class="api-key-row">
-          <input type="password" id="gemini-key-input" placeholder="sk-or-…" autocomplete="off">
+          <input type="password" id="gemini-key-input" placeholder="AIza…" autocomplete="off">
           <button class="btn btn-primary" onclick="saveApiKey()">Сохранить</button>
         </div>
       </div>
@@ -544,7 +544,7 @@ textarea { resize: vertical; min-height: 70px; }
 // ══════════════════════════════════════════════════════
 const STORE_KEY = 'worterbuch_v1';
 const TODAY_KEY = 'worterbuch_today_' + new Date().toDateString();
-const API_KEY_STORE = 'wb_openrouter_key';
+const API_KEY_STORE = 'wb_gemini_key';
 
 let words = [];
 let sortField = 'de', sortDir = 1;
@@ -783,10 +783,10 @@ function renderTrainingPage() {
   const banner = document.getElementById('api-banner');
   if(geminiKey) {
     banner.classList.add('ok');
-    banner.innerHTML=`<div class="api-banner-icon">✅</div><div class="api-banner-text"><h4>OpenRouter API подключён</h4><p class="api-status-ok">Ключ сохранён</p><div class="api-key-row" style="margin-top:8px"><input type="password" id="gemini-key-input" placeholder="Сменить ключ…" autocomplete="off" style="max-width:280px"><button class="btn btn-ghost" onclick="saveApiKey()">Обновить</button></div></div>`;
+    banner.innerHTML=`<div class="api-banner-icon">✅</div><div class="api-banner-text"><h4>Gemini API подключён</h4><p class="api-status-ok">Ключ сохранён</p><div class="api-key-row" style="margin-top:8px"><input type="password" id="gemini-key-input" placeholder="Сменить ключ…" autocomplete="off" style="max-width:280px"><button class="btn btn-ghost" onclick="saveApiKey()">Обновить</button></div></div>`;
   } else {
     banner.classList.remove('ok');
-    banner.innerHTML=`<div class="api-banner-icon">🔑</div><div class="api-banner-text"><h4>Введи OpenRouter API ключ</h4><p>Получи ключ на <a href="https://openrouter.ai/settings/keys" target="_blank" style="color:var(--accent)">openrouter.ai/settings/keys</a> — хранится только в браузере</p><div class="api-key-row"><input type="password" id="gemini-key-input" placeholder="sk-or-…" autocomplete="off"><button class="btn btn-primary" onclick="saveApiKey()">Сохранить</button></div></div>`;
+    banner.innerHTML=`<div class="api-banner-icon">🔑</div><div class="api-banner-text"><h4>Введи Gemini API ключ</h4><p>Бесплатный ключ на <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a> — хранится только в браузере</p><div class="api-key-row"><input type="password" id="gemini-key-input" placeholder="AIza…" autocomplete="off"><button class="btn btn-primary" onclick="saveApiKey()">Сохранить</button></div></div>`;
   }
 
   const hasEnough = words.length >= 3;
@@ -822,34 +822,26 @@ function updateStartBtn() {
 }
 
 // ══════════════════════════════════════════════════════
-//  OPENROUTER API CALL
+//  GEMINI API CALL
 // ══════════════════════════════════════════════════════
 async function callGemini(prompt) {
-  if(window.location.protocol === 'file:') {
-    throw new Error('Файл открыт локально (file://). Запусти через сервер: python3 -m http.server 8080, затем открой http://localhost:8080/german-vocab.html');
-  }
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    mode: 'cors',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${geminiKey}`,
-      'HTTP-Referer': window.location.href,
-      'X-Title': 'Wörterbuch'
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      max_tokens: 800
-    })
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 800 }
+      })
+    }
+  );
   if(!res.ok) {
-    const err=await res.json().catch(()=>({}));
+    const err = await res.json().catch(()=>({}));
     throw new Error(err.error?.message || `HTTP ${res.status}`);
   }
-  const data=await res.json();
-  return data.choices?.[0]?.message?.content || '';
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 // ══════════════════════════════════════════════════════
